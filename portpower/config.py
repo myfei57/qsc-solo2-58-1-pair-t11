@@ -18,6 +18,7 @@ class Settings:
     data_dir: str
     host: str
     port: int
+    store_format: str = "versioned"
 
 
 def parse_listen_address(raw: str) -> tuple[str, int]:
@@ -50,9 +51,20 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
 
     env = os.environ if environ is None else environ
     data_dir = env.get("PORTPOWER_DATA_DIR", "").strip() or DEFAULT_DATA_DIR
+    store_format = env.get("PORTPOWER_STORE_FORMAT", "").strip() or "versioned"
+    if store_format not in {"legacy", "versioned"}:
+        raise ValueError(
+            f"invalid store format: {store_format!r} "
+            "(expected 'legacy' or 'versioned')"
+        )
     address = env.get("PORTPOWER_ADDR", "").strip()
     if address:
         host, port = parse_listen_address(address)
     else:
         host, port = DEFAULT_HOST, DEFAULT_PORT
-    return Settings(data_dir=data_dir, host=host, port=port)
+    return Settings(
+        data_dir=data_dir,
+        host=host,
+        port=port,
+        store_format=store_format,
+    )

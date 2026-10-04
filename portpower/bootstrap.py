@@ -10,7 +10,7 @@ from portpower.console.routes import build_router
 from portpower.console.runtime import build_runtime
 from portpower.console.server import ConsoleServer
 from portpower.ns.harbor import Harbor
-from portpower.store.kvstore import RecordStore
+from portpower.store.factory import create_record_store
 
 LOGGER = logging.getLogger("portpower")
 
@@ -18,11 +18,19 @@ DEFAULT_HARBOR_ID = "pp-north"
 DEFAULT_HARBOR_NAME = "port-north"
 
 
-def create_server(settings: Settings | None = None) -> ConsoleServer:
+def create_server(
+    settings: Settings | None = None,
+    *,
+    adapters=None,
+) -> ConsoleServer:
     """Build the store, runtime and router, returning a ready server."""
 
     resolved = settings if settings is not None else load_settings()
-    store = RecordStore(resolved.data_dir)
+    store = create_record_store(
+        resolved.data_dir,
+        resolved.store_format,
+        adapters=adapters,
+    )
     store.load()
     harbor = Harbor(DEFAULT_HARBOR_ID, DEFAULT_HARBOR_NAME)
     runtime = build_runtime(harbor, store)

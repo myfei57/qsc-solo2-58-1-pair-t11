@@ -61,6 +61,52 @@ def status(runtime, request: Request) -> Response:
     )
 
 
+def migration_status(runtime, request: Request) -> Response:
+    status = getattr(runtime.store, "migration_status", None)
+    if not callable(status):
+        return Response.json(
+            200,
+            {
+                "format": "legacy",
+                "migration_progress": 1.0,
+                "compatible_read_ratio": 0.0,
+            },
+        )
+    payload = {"format": "versioned"}
+    payload.update(status().as_dict())
+    return Response.json(200, payload)
+
+
+def migrate_documents(runtime, request: Request) -> Response:
+    migrate = getattr(runtime.store, "migrate", None)
+    if not callable(migrate):
+        return Response.json(
+            409,
+            {"error": "running with legacy storage; online migration is disabled"},
+        )
+    raw_limit = request.query_one("limit")
+    limit = None
+    if raw_limit is not None:
+        try:
+            limit = int(raw_limit)
+        except ValueError:
+            return Response.json(400, {"error": "limit must be an integer"})
+        if limit < 0:
+            return Response.json(400, {"error": "limit must be non-negative"})
+    raw_after = request.query_one("after")
+    if raw_after is not None:
+        raw_after = raw_after.strip() or None
+    try:
+        status = migrate(limit, resume_after=raw_after)
+    except KeyError as exc:
+        return Response.json(400, {"error": f"invalid cursor: {exc.args[0]!r}"})
+    except ValueError as exc:
+        return Response.json(409, {"error": str(exc)})
+    payload = {"format": "versioned", "migrated": True}
+    payload.update(status.as_dict())
+    return Response.json(200, payload)
+
+
 def snapshot(runtime, request: Request) -> Response:
     return Response.json(200, export_snapshot(runtime.store))
 

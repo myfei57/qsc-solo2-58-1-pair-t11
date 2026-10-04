@@ -28,6 +28,8 @@ def build_router(runtime) -> Router:
 
     router.get("/health", bind(system.health, runtime))
     router.get("/status", bind(system.status, runtime))
+    router.get("/store/migration", bind(system.migration_status, runtime))
+    router.post("/store/migration", bind(system.migrate_documents, runtime))
     router.post("/snapshot", bind(system.snapshot, runtime))
     router.post("/restore", bind(system.restore, runtime))
 

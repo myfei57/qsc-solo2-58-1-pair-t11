@@ -9,6 +9,9 @@ from portpower.store.kvstore import RecordStore, encode
 
 
 def export_snapshot(store: RecordStore) -> dict[str, Any]:
+    export_documents = getattr(store, "export_documents", None)
+    if callable(export_documents):
+        return export_documents()
     with store.transaction() as data:
         return {key: json.loads(value.decode("utf-8")) for key, value in data.items()}
 
